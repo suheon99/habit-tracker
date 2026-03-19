@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 habit tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #7CFFB2;
+    --green-dim: #5fd9a0;
+    --green-glow: rgba(124,255,178,0.15);
+    --bg: #050505;
+    --bg2: #0b1412;
+    --bg3: #0e1a17;
+    --border: #1c2a26;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 배경 노이즈 레이어 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 상단 희미한 그린 글로우 */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(124,255,178,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* ── 헤더 ── */
+  header {
+    padding: 48px 0 0;
+    text-align: center;
+  }
+
+  .pixel-title {
+    display: inline-block;
+  }
+
+  .pixel-row { display: flex; justify-content: center; }
+  .pixel {
+    width: 6px; height: 6px;
+    margin: 1px;
+    background: #111;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .pixel.on {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  .header-sub {
+    margin-top: 14px;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: #3a5a4e;
+    text-transform: uppercase;
+  }
+
+  /* ── 구분선 ── */
+  .divider {
+    margin: 28px 0 0;
+    border: none;
+    border-top: 1px solid var(--border);
+    position: relative;
+  }
+  .divider::after {
+    content: '';
+    position: absolute;
+    top: -1px; left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 1px;
+    background: var(--green-dim);
+    box-shadow: 0 0 8px var(--green-dim);
+  }
+
+  /* ── 탭바 ── */
+  .tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 24px 0 0;
+  }
+
+  .habit-item {
+    padding: 5px 14px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    border-radius: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    color: #5a7a6e;
+    letter-spacing: 0.05em;
+  }
+  .habit-item:hover {
+    border-color: var(--green-dim);
+    color: var(--green);
+    box-shadow: 0 0 6px var(--green-glow);
+  }
+  .habit-item.active {
+    border-color: var(--green);
+    color: var(--green);
+    background: #0f2b22;
+    box-shadow: 0 0 8px var(--green-glow), inset 0 0 8px rgba(124,255,178,0.04);
+  }
+
+  .add-btn {
+    padding: 5px 14px;
+    background: transparent;
+    color: #3a5a4e;
+    border: 1px dashed #2a3d38;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .add-btn:hover {
+    color: var(--green-dim);
+    border-color: var(--green-dim);
+  }
+
+  /* ── stat ── */
+  .stat-bar {
+    margin: 20px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: #3a5a4e;
+    letter-spacing: 0.2em;
+  }
+
+  .stat-value {
+    font-size: 13px;
+    color: var(--green);
+    letter-spacing: 0.1em;
+  }
+
+  .progress-bar {
+    width: 120px;
+    height: 3px;
+    background: #1c2a26;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── year grid ── */
+  .year-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin: 24px 0 0;
+  }
+
+  .month {
+    padding: 14px 12px 12px;
+    border: 1px solid #111;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    background: #080d0c;
+    transition: border-color 0.2s;
+  }
+  .month:hover {
+    border-color: #1c2a26;
+  }
+
+  .month canvas.pixel-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .month > *:not(canvas) {
+    position: relative;
+    z-index: 1;
+  }
+
+  .month-title-wrap {
+    margin-bottom: 10px;
+  }
+
+  .days {
+    display: grid;
+    grid-template-columns: repeat(7, 22px);
+    gap: 5px;
+    justify-content: center;
+  }
+
+  .weekday {
+    font-size: 9px;
+    color: #2a4a3e;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  .star {
+    width: 22px; height: 22px;
+    background: #141e1c;
+    opacity: 0.8;
+    clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    color: #2a3d38;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.12s;
+  }
+  .star:hover { opacity: 1; background: #1e3228; }
+
+  .star.active {
+    background: var(--green);
+    color: #003322;
+    opacity: 1;
+    box-shadow: 0 0 6px var(--green), 0 0 14px rgba(124,255,178,0.3);
+  }
+
+  .star.today {
+    outline: 1px solid var(--green-dim);
+    outline-offset: 1px;
+    opacity: 1;
+  }
+
+  /* ── 푸터 ── */
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: #1e3228;
+    padding-bottom: 20px;
+  }
+
+  /* ── 스크롤바 ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #1c2a26; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="pixel-title" id="title"></div>
+    <p class="header-sub">track your year / one star at a time</p>
+  </header>
+
+  <hr class="divider">
+
+  <div id="tab-bar" class="tab-bar"></div>
+
+  <div class="stat-bar">
+    <span class="stat-label">YEAR PROGRESS</span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <span class="stat-value" id="stat">0%</span>
+  </div>
+
+  <div id="tracker" class="year-grid"></div>
+
+  <footer>★ 2026 habit tracker ★</footer>
+</div>
+
+<script>
+const font = {
+  '2':["11110","00010","01110","10000","11111"],
+  '0':["01110","10001","10001","10001","01110"],
+  '6':["01110","10000","11110","10001","01110"],
+  H:["10001","10001","11111","10001","10001"],
+  A:["01110","10001","11111","10001","10001"],
+  B:["11110","10001","11110","10001","11110"],
+  I:["111","010","010","010","111"],
+  T:["11111","00100","00100","00100","00100"],
+  R:["11110","10001","11110","10100","10010"],
+  C:["01111","10000","10000","10000","01111"],
+  K:["10010","10100","11000","10100","10010"],
+  E:["11111","10000","11110","10000","11111"],
+  J:["00111","00010","00010","10010","01100"],
+  M:["10001","11011","10101","10001","10001"],
+  N:["10001","11001","10101","10011","10001"],
+  O:["01110","10001","10001","10001","01110"],
+  P:["11110","10001","11110","10000","10000"],
+  L:["10000","10000","10000","10000","11111"],
+  U:["10001","10001","10001","10001","01110"],
+  G:["01110","10000","10111","10001","01110"],
+  S:["01111","10000","01110","00001","11110"],
+  V:["10001","10001","10001","01010","00100"],
+  Y:["10001","01010","00100","00100","00100"],
+  ' ':["0","0","0","0","0"]
+};
+
+function drawText(text, container) {
+  container.innerHTML = "";
+  for (let r = 0; r < 5; r++) {
+    const row = document.createElement("div");
+    row.className = "pixel-row";
+    for (let ch of text) {
+      const line = (font[ch] || font[' '])[r] || "";
+      for (let bit of line) {
+        const p = document.createElement("div");
+        p.className = "pixel";
+        if (bit === "1") p.classList.add("on");
+        row.appendChild(p);
+      }
+      for (let i = 0; i < 2; i++) {
+        const s = document.createElement("div");
+        s.className = "pixel";
+        row.appendChild(s);
+      }
+    }
+    container.appendChild(row);
+  }
+}
+
+drawText("2026 HABIT TRACKER", document.getElementById("title"));
+
+let habits = JSON.parse(localStorage.getItem("habits")) || ["스트레칭", "허벅지"];
+let currentHabit = habits[0];
+
+const tabBar    = document.getElementById("tab-bar");
+const tracker   = document.getElementById("tracker");
+const statEl    = document.getElementById("stat");
+const fillEl    = document.getElementById("progress-fill");
+
+function renderTabs() {
+  tabBar.innerHTML = "";
+  habits.forEach(h => {
+    const item = document.createElement("div");
+    item.className = "habit-item" + (h === currentHabit ? " active" : "");
+    item.innerText = h;
+    item.title = h;
+    item.onclick = () => { currentHabit = h; renderTabs(); renderTracker(); };
+    tabBar.appendChild(item);
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "add-btn";
+  addBtn.innerText = "+ 추가";
+  addBtn.onclick = () => {
+    const name = prompt("해빗 이름 입력");
+    if (name) {
+      habits.push(name);
+      localStorage.setItem("habits", JSON.stringify(habits));
+      currentHabit = name;
+      renderTabs();
+      renderTracker();
+    }
+  };
+  tabBar.appendChild(addBtn);
+}
+
+const daysInMonth = [31,28,31,30,31,30,31,31,30,31,30,31];
+const monthNames  = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const weekdays    = ["S","M","T","W","T","F","S"];
+
+function drawPixelBg(canvas, activeDays, totalDays) {
+  const W = canvas.offsetWidth  || 200;
+  const H = canvas.offsetHeight || 160;
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, H);
+
+  const PIXEL = 3, GAP = 3, STEP = PIXEL + GAP;
+  const cols = Math.floor(W / STEP);
+  const rows = Math.floor(H / STEP);
+  const ratio = totalDays > 0 ? activeDays / totalDays : 0;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (Math.random() > ratio * 1.3) continue;
+      const x = c * STEP + (Math.random() * 2 - 1);
+      const y = r * STEP + (Math.random() * 2 - 1);
+      const alpha = 0.06 + Math.random() * 0.22;
+      ctx.fillStyle = `rgba(124,255,178,${alpha.toFixed(2)})`;
+      ctx.fillRect(x, y, PIXEL, PIXEL);
+    }
+  }
+}
+
+function renderTracker() {
+  tracker.innerHTML = "";
+  let total = 0, done = 0;
+  const today = new Date();
+  const pending = [];
+
+  daysInMonth.forEach((days, mIndex) => {
+    const monthDiv = document.createElement("div");
+    monthDiv.className = "month";
+
+    const canvas = document.createElement("canvas");
+    canvas.className = "pixel-bg";
+    monthDiv.appendChild(canvas);
+
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "month-title-wrap";
+    drawText(monthNames[mIndex], titleWrap);
+    monthDiv.appendChild(titleWrap);
+
+    const header = document.createElement("div");
+    header.className = "days";
+    header.style.marginTop = "8px";
+    weekdays.forEach(d => {
+      const w = document.createElement("div");
+      w.className = "weekday";
+      w.innerText = d;
+      header.appendChild(w);
+    });
+    monthDiv.appendChild(header);
+
+    const grid = document.createElement("div");
+    grid.className = "days";
+    grid.style.marginTop = "5px";
+
+    let monthDone = 0;
+    for (let i = 0; i < days; i++) {
+      total++;
+      const key = `${currentHabit}-${mIndex}-${i}`;
+      const saved = localStorage.getItem(key);
+      const star = document.createElement("div");
+      star.className = "star";
+      if (saved) { star.classList.add("active"); done++; monthDone++; }
+      star.innerText = i + 1;
+      if (today.getMonth() === mIndex && today.getDate() - 1 === i) star.classList.add("today");
+      star.onclick = () => {
+        star.classList.toggle("active");
+        localStorage[star.classList.contains("active") ? "setItem" : "removeItem"](key, true);
+        renderTracker();
+      };
+      grid.appendChild(star);
+    }
+
+    monthDiv.appendChild(grid);
+    tracker.appendChild(monthDiv);
+    pending.push({ canvas, monthDone, days });
+  });
+
+  const pct = Math.round((done / total) * 100);
+  statEl.innerText = `${pct}%`;
+  fillEl.style.width = pct + "%";
+
+  requestAnimationFrame(() => {
+    pending.forEach(({ canvas, monthDone, days }) => drawPixelBg(canvas, monthDone, days));
+  });
+}
+
+renderTabs();
+renderTracker();
+</script>
+</body>
+</html>
