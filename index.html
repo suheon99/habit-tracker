@@ -13,7 +13,7 @@
     --green: #7CFFB2;
     --green-dim: #5fd9a0;
     --green-glow: rgba(124,255,178,0.15);
-    --bg: #050505;
+    --bg: #0c1410;
     --bg2: #0b1412;
     --bg3: #0e1a17;
     --border: #1c2a26;
@@ -62,6 +62,17 @@
     padding: 0 20px 60px;
   }
 
+  /* 커서 숨기기 */
+  * { cursor: none !important; }
+
+  /* 별똥별 캔버스 */
+  #shooting-stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
   /* ── 헤더 ── */
   header {
     padding: 48px 0 0;
@@ -69,7 +80,9 @@
   }
 
   .pixel-title {
-    display: inline-block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .pixel-row { display: flex; justify-content: center; }
@@ -301,6 +314,7 @@
 </head>
 <body>
 
+<canvas id="shooting-stars"></canvas>
 <div class="wrap">
   <header>
     <div class="pixel-title" id="title"></div>
@@ -510,6 +524,187 @@ function renderTracker() {
 
 renderTabs();
 renderTracker();
+
+// ── 마우스 커서 별똥별 꼬리 ──
+(function() {
+  const cursorCanvas = document.createElement("canvas");
+  cursorCanvas.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;";
+  document.body.appendChild(cursorCanvas);
+  const ctx = cursorCanvas.getContext("2d");
+
+  function resize() {
+    cursorCanvas.width  = window.innerWidth;
+    cursorCanvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  const DOT = 3;
+  const TRAIL_LEN = 18;
+  const trail = [];
+  let mx = -100, my = -100;
+
+  document.addEventListener("mousemove", e => {
+    mx = e.clientX;
+    my = e.clientY;
+  });
+
+  const MOON_SHAPE = [
+    [0,0,1,1],
+    [0,1,1,0],
+    [1,1,0,0],
+    [0,1,1,0],
+    [0,0,1,1],
+  ];
+
+  function drawPixelStar(cx, cy, alpha) {
+    const s = DOT;
+    const offR = Math.floor(MOON_SHAPE.length / 2);
+    const offC = Math.floor(MOON_SHAPE[0].length / 2);
+    MOON_SHAPE.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        if (!cell) return;
+        ctx.fillStyle = `rgba(210,235,225,${alpha.toFixed(2)})`;
+        ctx.fillRect(
+          Math.round((cx + (c - offC) * s) / s) * s,
+          Math.round((cy + (r - offR) * s) / s) * s,
+          s, s
+        );
+      });
+    });
+  }
+
+  function drawDot(x, y, alpha) {
+    ctx.fillStyle = `rgba(124,255,178,${alpha.toFixed(2)})`;
+    ctx.fillRect(
+      Math.round(x / DOT) * DOT,
+      Math.round(y / DOT) * DOT,
+      DOT, DOT
+    );
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+
+    trail.push({ x: mx, y: my });
+    if (trail.length > TRAIL_LEN) trail.shift();
+
+    trail.forEach((p, i) => {
+      const a = ((i + 1) / trail.length) * 0.55;
+      drawDot(p.x, p.y, a);
+    });
+
+    drawPixelStar(mx, my, 0.95);
+
+    requestAnimationFrame(tick);
+  }
+
+  tick();
+})();
+
+// ── 별똥별 픽셀 애니메이션 ──
+(function() {
+  const canvas = document.getElementById("shooting-stars");
+  const ctx = canvas.getContext("2d");
+  const DOT = 3;
+  const TRAIL = 12;
+  const INTERVAL = 800; // 더 자주 생성
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  const stars = [];
+
+  function spawnStar() {
+    const fromTop = Math.random() > 0.4;
+    const x = fromTop ? Math.random() * canvas.width : canvas.width + DOT * 2;
+    const y = fromTop ? -DOT * 2 : Math.random() * canvas.height * 0.5;
+    const speed = 3 + Math.random() * 4;
+    const angle = (35 + Math.random() * 20) * Math.PI / 180;
+    stars.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      trail: [],
+      alpha: 0.7 + Math.random() * 0.3,
+      dead: false
+    });
+  }
+
+  // 픽셀 별 모양 (5x5 그리드)
+  const STAR_SHAPE = [
+    [0,0,1,0,0],
+    [1,1,1,1,1],
+    [0,1,1,1,0],
+    [1,0,1,0,1],
+    [0,0,1,0,0],
+  ];
+
+  function drawStar(cx, cy, alpha) {
+    const size = DOT;
+    const offset = Math.floor(STAR_SHAPE.length / 2);
+    STAR_SHAPE.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        if (!cell) return;
+        const px = Math.round((cx + (c - offset) * size) / size) * size;
+        const py = Math.round((cy + (r - offset) * size) / size) * size;
+        ctx.fillStyle = `rgba(124,255,178,${alpha.toFixed(2)})`;
+        ctx.fillRect(px, py, size, size);
+      });
+    });
+  }
+
+  function drawDot(x, y, alpha) {
+    ctx.fillStyle = `rgba(124,255,178,${alpha.toFixed(2)})`;
+    ctx.fillRect(
+      Math.round(x / DOT) * DOT,
+      Math.round(y / DOT) * DOT,
+      DOT, DOT
+    );
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    stars.forEach(s => {
+      s.trail.push({ x: s.x, y: s.y });
+      if (s.trail.length > TRAIL) s.trail.shift();
+
+      // 꼬리: 도트
+      s.trail.forEach((p, i) => {
+        const a = s.alpha * ((i + 1) / s.trail.length) * 0.5;
+        drawDot(p.x, p.y, a);
+      });
+
+      // 머리: 별 모양
+      drawStar(s.x, s.y, s.alpha);
+
+      s.x += s.vx;
+      s.y += s.vy;
+
+      if (s.x > canvas.width + 50 || s.y > canvas.height + 50) {
+        s.dead = true;
+      }
+    });
+
+    for (let i = stars.length - 1; i >= 0; i--) {
+      if (stars[i].dead) stars.splice(i, 1);
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  // 처음에 여러 개 동시 생성
+  for (let i = 0; i < 5; i++) {
+    setTimeout(spawnStar, i * 300);
+  }
+  setInterval(spawnStar, INTERVAL);
+  tick();
+})();
 </script>
 </body>
 </html>
