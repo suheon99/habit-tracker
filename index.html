@@ -29,7 +29,6 @@
     overflow-x: hidden;
   }
 
-  /* 배경 노이즈 레이어 */
   body::before {
     content: '';
     position: fixed;
@@ -40,7 +39,6 @@
     z-index: 0;
   }
 
-  /* 상단 희미한 그린 글로우 */
   body::after {
     content: '';
     position: fixed;
@@ -62,10 +60,8 @@
     padding: 0 20px 60px;
   }
 
-  /* 커서 숨기기 */
   * { cursor: none !important; }
 
-  /* 별똥별 캔버스 */
   #shooting-stars {
     position: fixed;
     inset: 0;
@@ -73,7 +69,6 @@
     z-index: 0;
   }
 
-  /* ── 헤더 ── */
   header {
     padding: 48px 0 0;
     text-align: center;
@@ -105,7 +100,6 @@
     text-transform: uppercase;
   }
 
-  /* ── 구분선 ── */
   .divider {
     margin: 28px 0 0;
     border: none;
@@ -123,7 +117,6 @@
     box-shadow: 0 0 8px var(--green-dim);
   }
 
-  /* ── 탭바 ── */
   .tab-bar {
     display: flex;
     flex-wrap: wrap;
@@ -177,7 +170,6 @@
     border-color: var(--green-dim);
   }
 
-  /* ── stat ── */
   .stat-bar {
     margin: 20px 0 0;
     display: flex;
@@ -213,7 +205,6 @@
     transition: width 0.4s ease;
   }
 
-  /* ── year grid ── */
   .year-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -295,7 +286,6 @@
     opacity: 1;
   }
 
-  /* ── 푸터 ── */
   footer {
     margin-top: 40px;
     text-align: center;
@@ -305,7 +295,6 @@
     padding-bottom: 20px;
   }
 
-  /* ── 스크롤바 ── */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: #1c2a26; border-radius: 2px; }
@@ -490,6 +479,15 @@ function renderTracker() {
     grid.className = "days";
     grid.style.marginTop = "5px";
 
+    // ✅ 2026년 각 월 1일의 요일 오프셋 (0=일, 1=월 ... 6=토)
+    const firstDayOffset = new Date(2026, mIndex, 1).getDay();
+    for (let s = 0; s < firstDayOffset; s++) {
+      const spacer = document.createElement("div");
+      spacer.style.width = "22px";
+      spacer.style.height = "22px";
+      grid.appendChild(spacer);
+    }
+
     let monthDone = 0;
     for (let i = 0; i < days; i++) {
       total++;
@@ -608,7 +606,7 @@ renderTracker();
   const ctx = canvas.getContext("2d");
   const DOT = 3;
   const TRAIL = 12;
-  const INTERVAL = 800; // 더 자주 생성
+  const INTERVAL = 800;
 
   function resize() {
     canvas.width  = window.innerWidth;
@@ -635,7 +633,6 @@ renderTracker();
     });
   }
 
-  // 픽셀 별 모양 (5x5 그리드)
   const STAR_SHAPE = [
     [0,0,1,0,0],
     [1,1,1,1,1],
@@ -674,13 +671,11 @@ renderTracker();
       s.trail.push({ x: s.x, y: s.y });
       if (s.trail.length > TRAIL) s.trail.shift();
 
-      // 꼬리: 도트
       s.trail.forEach((p, i) => {
         const a = s.alpha * ((i + 1) / s.trail.length) * 0.5;
         drawDot(p.x, p.y, a);
       });
 
-      // 머리: 별 모양
       drawStar(s.x, s.y, s.alpha);
 
       s.x += s.vx;
@@ -698,7 +693,6 @@ renderTracker();
     requestAnimationFrame(tick);
   }
 
-  // 처음에 여러 개 동시 생성
   for (let i = 0; i < 5; i++) {
     setTimeout(spawnStar, i * 300);
   }
